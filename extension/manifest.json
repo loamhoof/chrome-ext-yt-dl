@@ -10,8 +10,5 @@
         "download": {
             "description": "Send URL of the currently listened to YT song via HTTP GET request"
         }
-    },
-    "settings": {
-        "target": "http://192.168.1.21:9999"
     }
 }
