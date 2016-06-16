@@ -10,6 +10,7 @@
                     xhr.open('GET', `${target}/${encodeURIComponent(tab.url)}`);
                     xhr.send();
                 }
+                chrome.extension.getBackgroundPage().console.log(tab.url);
             }
         })
     });
