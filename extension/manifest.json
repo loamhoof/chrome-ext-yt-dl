@@ -5,10 +5,13 @@
     "background": {
         "scripts": ["main.js"]
     },
-    "permissions": ["tabs"],
+    "permissions": ["tabs", "storage"],
     "commands": {
         "download": {
             "description": "Send URL of the currently listened to YT song via HTTP GET request"
         }
+    },
+    "browser_action": {
+        "default_popup": "popup.html"
     }
 }
