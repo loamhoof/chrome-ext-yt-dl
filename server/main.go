@@ -87,7 +87,7 @@ func download(url string, playlist bool) {
 	cmd := exec.Command("youtube-dl",
 		playlistArg,
 		"--limit-rate", "1M",
-		// "--download-archive", archivePath,
+		"--download-archive", archivePath,
 		"--extract-audio",
 		"--audio-quality", "0",
 		"--audio-format", "aac",
