@@ -12,15 +12,18 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
-	"github.com/conformal/gotk3/gtk"
-	"github.com/doxxan/appindicator"
-	"github.com/doxxan/appindicator/gtk-extensions/gotk3"
 	"golang.org/x/exp/utf8string"
+
+	pb "github.com/loamhoof/indicator"
+	"github.com/loamhoof/indicator/client"
 )
 
 var (
 	downloadDir, archivePath, icon string
+	port                           int
+	sc                             *client.ShepherdClient
 	count                          int
 	titleRe                        *regexp.Regexp = regexp.MustCompile("\\[download]\\s+Destination:\\s+(.+)")
 	progressRe                     *regexp.Regexp = regexp.MustCompile("\\[download]\\s+(\\d+\\.\\d)%")
@@ -30,6 +33,7 @@ var (
 )
 
 func init() {
+	flag.IntVar(&port, "port", 15000, "Port of the shepherd")
 	flag.StringVar(&downloadDir, "dir", "", "Path to the download directory")
 	flag.StringVar(&archivePath, "archive", "", "Path to the archive file")
 	flag.StringVar(&icon, "icon", "", "Path to the icon")
@@ -68,11 +72,17 @@ func main() {
 		cmdLogger = f
 	}
 
-	gtk.Init(nil)
+	sc = client.NewShepherdClient(port)
+	for {
+		err := sc.Init()
+		if err == nil {
+			break
+		}
+		logger.Fatalf("Could not connect: %v", err)
 
-	go func() {
-		gtk.Main()
-	}()
+		time.Sleep(time.Second * 5)
+	}
+	defer sc.Close()
 
 	http.HandleFunc("/", ServeHTTP)
 	logger.Println("Listening...")
@@ -88,24 +98,6 @@ func download(url string, playlist bool) {
 
 	count++
 	id := fmt.Sprintf("indicator-youtube-dl-%v", count)
-	indicator := gotk3.NewAppIndicator(id, icon, appindicator.CategorySystemServices)
-
-	indicator.SetStatus(appindicator.StatusActive)
-
-	menu, err := gtk.MenuNew()
-	if err != nil {
-		panic(err)
-	}
-
-	menuItem, err := gtk.MenuItemNewWithLabel("")
-	if err != nil {
-		panic(err)
-	}
-
-	menu.Append(menuItem)
-
-	menuItem.Show()
-	indicator.SetMenu(menu)
 
 	var playlistArg string
 	if playlist {
@@ -164,7 +156,15 @@ func download(url string, playlist bool) {
 		if submatches := progressRe.FindSubmatch(read); len(submatches) > 0 {
 			progress, _ := strconv.ParseFloat(string(submatches[1]), 64)
 
-			indicator.SetLabel(fmt.Sprintf("[%.2f%%]%s", progress, title), "")
+			iReq := &pb.Request{
+				Id:     id,
+				Icon:   icon,
+				Label:  fmt.Sprintf("[%.2f%%]%s", progress, title),
+				Active: true,
+			}
+			if _, err := sc.Update(iReq); err != nil {
+				logger.Println(err)
+			}
 		}
 	}
 
@@ -176,7 +176,13 @@ func download(url string, playlist bool) {
 	logger.Println("Done", title)
 	notify("Done ", title)
 
-	indicator.SetStatus(appindicator.StatusPassive)
+	iReq := &pb.Request{
+		Id:     id,
+		Active: false,
+	}
+	if _, err := sc.Update(iReq); err != nil {
+		logger.Println(err)
+	}
 }
 
 func notify(msg ...interface{}) {
