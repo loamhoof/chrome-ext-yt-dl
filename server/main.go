@@ -157,10 +157,11 @@ func download(url string, playlist bool) {
 			progress, _ := strconv.ParseFloat(string(submatches[1]), 64)
 
 			iReq := &pb.Request{
-				Id:     id,
-				Icon:   icon,
-				Label:  fmt.Sprintf("[%.2f%%]%s", progress, title),
-				Active: true,
+				Id:         id,
+				Icon:       icon,
+				Label:      fmt.Sprintf("[%.2f%%]%s", progress, title),
+				LabelGuide: "[100.00%]ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF",
+				Active:     true,
 			}
 			if _, err := sc.Update(iReq); err != nil {
 				logger.Println(err)
